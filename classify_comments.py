@@ -34,8 +34,15 @@ def load_comments():
     cur = conn.cursor()
     cur.execute("SELECT * FROM COMMENTS")
     rows = cur.fetchall()
-    return [base64.b64decode((row[2])) for row in rows]
+    return [(row[0], base64.b64decode((row[2]))) for row in rows]
 
+def save_class(res):
+    conn = utils.conn
+    cur = conn.cursor()
+    for r in res:
+        add_row = 'INSERT INTO COMMENTS_CLASSES (ID, SENTIMENT) values ("{0}", "{1}");'.format(r[0], r[1])
+        cur.execute(add_row)
+    conn.commit()
 
 def load_model():
     global model
@@ -50,14 +57,19 @@ if __name__ == "__main__":
 
     load_db()
     comments = load_comments()
-    close_db()
 
     load_model()
 
-    tokenized = [word_tokenize(comment.decode('utf-8').strip().lower()) for comment in comments]
+    tokenized = [word_tokenize(comment[1].decode('utf-8').strip().lower()) for comment in comments]
 
     tokenized_id = [ [1] + [word_to_id2(wid) for wid in tokenized_text] for tokenized_text in tokenized]
-    print len(tokenized)    
     tokenized_id_pad = sequence.pad_sequences(tokenized_id, maxlen=maxlen)
 
-    print model.predict(tokenized_id_pad)
+    res = model.predict(tokenized_id_pad)
+
+    res[res >= 0.5] = 1
+    res[res < 0.5] = 0
+
+    save_class (zip([comment[0] for comment in comments], res))
+
+    close_db()
