@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from nltk import word_tokenize
 from keras.datasets import imdb
 from keras.preprocessing import sequence
